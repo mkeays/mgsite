@@ -1,6 +1,6 @@
 # Mother Goose Pre-School website
 
-Code for site at: http://www.mothergoosepreschool.co.uk
+Code for site to potentially exist at: http://www.mothergoosepreschool.co.uk
 
 
 ## Getting started
