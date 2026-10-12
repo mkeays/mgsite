@@ -133,9 +133,9 @@ AUTH_USER_MODEL = "custom_user.User"
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = "en-us"
+LANGUAGE_CODE = "en-gb"
 
-TIME_ZONE = "America/New_York"
+TIME_ZONE = "Europe/London"
 
 USE_I18N = False
 
