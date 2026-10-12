@@ -4,7 +4,7 @@ from .base import *  # noqa
 DEBUG = True
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "=%ra$l!@r3=x14qmp&y&4z677boe93ajw#pgtnyi8f)i0*oto_"
+SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 
 ALLOWED_HOSTS = ["*"]
 
