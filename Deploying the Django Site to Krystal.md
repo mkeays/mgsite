@@ -4,7 +4,7 @@ Oct 9, 2026 · @Maria
 
 ## Overview
 
-The site moves from the Linux Apache test server to Krystal's cPanel hosting, keeping SQLite, in 14 steps: 5 to do now, 9 once cPanel access arrives.
+The site moves from the Linux Apache test server to Krystal's cPanel hosting, keeping SQLite and Wagtail CRX, in 14 steps: 5 to do now, 9 once cPanel access arrives.
 
 Assumptions used throughout (replace with your real names):
 
@@ -51,6 +51,9 @@ ALLOWED_HOSTS = os.environ.get(
 # Krystal points these into public_html; the test server keeps base.py values
 STATIC_ROOT = os.environ.get("DJANGO_STATIC_ROOT", STATIC_ROOT)
 MEDIA_ROOT = os.environ.get("DJANGO_MEDIA_ROOT", MEDIA_ROOT)
+
+# Wagtail: used for links in admin emails and notifications
+WAGTAILADMIN_BASE_URL = os.environ.get("WAGTAILADMIN_BASE_URL", "http://localhost")
 
 # Only switch on once HTTPS works on Krystal
 if os.environ.get("DJANGO_HTTPS") == "True":
@@ -142,6 +145,7 @@ In **Setup Python App**, edit your app and add these variables:
 | `DJANGO_ALLOWED_HOSTS` | `yourdomain.co.uk,www.yourdomain.co.uk` |
 | `DJANGO_STATIC_ROOT` | `/home/CPANELUSER/public_html/static` |
 | `DJANGO_MEDIA_ROOT` | `/home/CPANELUSER/public_html/media` |
+| `WAGTAILADMIN_BASE_URL` | `https://yourdomain.co.uk` |
 
 Also set a **Passenger log file**, e.g. `/home/CPANELUSER/mgsite/passenger.log`, so errors are recorded. Save.
 
@@ -155,6 +159,7 @@ export DJANGO_SECRET_KEY='your-key-here'
 export DJANGO_ALLOWED_HOSTS=yourdomain.co.uk,www.yourdomain.co.uk
 export DJANGO_STATIC_ROOT=/home/CPANELUSER/public_html/static
 export DJANGO_MEDIA_ROOT=/home/CPANELUSER/public_html/media
+export WAGTAILADMIN_BASE_URL=https://yourdomain.co.uk
 ```
 
 In Terminal, paste the virtualenv command from step 7, then run:
@@ -165,6 +170,7 @@ source env.sh
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py collectstatic
+python manage.py update_index
 python manage.py check --deploy
 ```
 
@@ -177,7 +183,7 @@ Click **Restart** in Setup Python App, then check:
 - [ ] Home page loads
 - [ ] An image opens directly at `https://yourdomain.co.uk/media/images/...`
 - [ ] Images show on the pages
-- [ ] Admin login works
+- [ ] Wagtail admin login works and a page edit shows on the live site
 
 ### 14. Turn on HTTPS
 
@@ -186,6 +192,46 @@ In cPanel's **SSL/TLS Status**, confirm a certificate covers your domain; AutoSS
 1. Add `DJANGO_HTTPS` = `True` in Setup Python App.
 2. Add `export DJANGO_HTTPS=True` to `env.sh`.
 3. Click **Restart** and run `python manage.py check --deploy` again.
+
+## Wagtail and CRX
+
+The steps above work unchanged for Wagtail CRX, which deploys like any other Wagtail or Django site. Wagtail writes files while it runs, so these extra checks apply.
+
+### Media must be writable
+
+Wagtail saves resized images (renditions) under `MEDIA_ROOT`, in `media/images/`. After step 10, confirm your account can write to `~/public_html/media`. If uploads work but resized images fail, run:
+
+```bash
+chmod -R u+w ~/public_html/media
+```
+
+### WAGTAILADMIN\_BASE\_URL
+
+Wagtail uses this for links in admin emails and notifications. It is included in the `prod.py` code in step 2, the variables in step 11 and `env.sh` in step 12.
+
+### CRX page cache
+
+CRX projects usually use wagtail-cache, which stores cached pages in a folder on disk. Check your settings for a `CACHES` block using `FileBasedCache`:
+
+- Its `LOCATION` folder must exist and be writable on Krystal.
+- Keep it inside `~/mgsite`, not `public_html`.
+- If a page does not update after an edit, clear the cache in the Wagtail admin under **Settings → Cache**.
+
+### Protected media
+
+If you use `CRX_PROTECTED_MEDIA_ROOT` (for form uploads), leave that folder in `~/mgsite`. It must not go in `public_html`, or the files become public.
+
+### Search index
+
+Step 12 includes `python manage.py update_index`, which rebuilds Wagtail's search index on the server. Run it again after large content changes if search results look stale.
+
+### Compiled CSS
+
+If you have customised CRX's Sass files, compile them to CSS on the test server before packaging in step 5. The compiled `.css` then travels in the bundle and `collectstatic` picks it up.
+
+### Versions
+
+`requirements.txt` pins Wagtail, CRX and Pillow. In step 7, pick a Python version your Wagtail and CRX releases support; 3.12 is a safe choice. Pillow installs from pre-built wheels, so it should not need compiling.
 
 ## Troubleshooting
 
@@ -196,6 +242,8 @@ Most problems show up as one of these symptoms; `~/mgsite/passenger.log` usually
 | Bad Request (400) | Address not in `DJANGO_ALLOWED_HOSTS` | Add the hostname (no `https://`) and restart |
 | Server Error (500) or "Something went wrong" | Error in the app or settings | Read `passenger.log` |
 | Images missing | `media` not in `public_html`, or path mismatch | Check `DJANGO_MEDIA_ROOT` matches the folder exactly |
+| Original images show but resized ones fail | Wagtail cannot write renditions | `chmod -R u+w ~/public_html/media` |
+| Page edits do not appear on the site | CRX page cache serving an old copy | Clear it in Wagtail admin, **Settings → Cache** |
 | CSS missing | Static files not collected to `public_html` | `source env.sh`, re-run `collectstatic`, check `DJANGO_STATIC_ROOT` |
 | "attempt to write a readonly database" | `mgsite` folder or `db.sqlite3` not writable | `chmod u+w ~/mgsite ~/mgsite/db.sqlite3` |
 | Redirect loop | `DJANGO_HTTPS=True` before SSL works | Remove the variable until the certificate is issued |
@@ -208,5 +256,6 @@ Upload only changed code, and never overwrite the live `db.sqlite3` if content w
 1. Download a copy of `~/mgsite/db.sqlite3` as a backup.
 2. Upload the changed files to `~/mgsite` in File Manager.
 3. In Terminal: enter the virtualenv, `cd ~/mgsite`, `source env.sh`.
-4. Run `python manage.py migrate` if models changed, and `python manage.py collectstatic` if static files changed.
+4. Run `python manage.py migrate` if models changed, and `python manage.py collectstatic` if static files or compiled CSS changed.
 5. Click **Restart** in Setup Python App, or run `touch ~/mgsite/tmp/restart.txt`.
+6. Clear the CRX page cache in the Wagtail admin under **Settings → Cache**.
