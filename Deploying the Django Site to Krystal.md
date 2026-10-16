@@ -4,7 +4,7 @@ Oct 9, 2026 · @Maria
 
 ## Overview
 
-The site moves from the Linux Apache test server to Krystal's cPanel hosting, keeping SQLite and Wagtail CRX, in 14 steps: 5 to do now, 9 once cPanel access arrives.
+The site moves from the Linux Apache test server to Krystal's cPanel hosting, keeping SQLite and Wagtail CRX, and replaces the old Joomla 3 site on the same account, in 14 steps: 5 to do now, 9 once cPanel access arrives.
 
 Assumptions used throughout (replace with your real names):
 
@@ -83,21 +83,64 @@ Store it somewhere safe, not in Git. You will paste it into cPanel in step 11.
 
 ### 5. Package the site
 
-From the folder above `mgsite`:
+From the folder that contains `mgsite`:
 
 ```bash
-tar --exclude="mgsite/venv" --exclude="*/__pycache__" -czf mgsite.tar.gz mgsite
+cd /home/me
+tar --exclude="mgsite/.env" --exclude="mgsite/cache" --exclude="*/__pycache__" -czf mgsite.tar.gz mgsite
 ```
 
-Use your virtualenv's real folder name, or drop that exclude if it lives elsewhere. Check the bundle holds `manage.py`, `db.sqlite3` and `media/`:
+The virtualenv (`~/.venv`) sits outside `mgsite`, so it is left out automatically. The CRX page cache (`cache/`) is temporary and Django recreates it on Krystal. The test server's `.env` is excluded because its secret key and hosts do not belong on Krystal. Check the bundle holds `manage.py`, `db.sqlite3` and `media/`, and no `.env`:
 
 ```bash
 tar -tzf mgsite.tar.gz | less
 ```
 
+## Replacing the Joomla site
+
+The old Joomla 3 site lives in `public_html` on the same Krystal account, where the Django site needs to go. Its files, its `.htaccess` rewrite rules and its own `media/` and `images/` folders would clash with steps 7 and 10, so Joomla moves out first. Joomla 3 has had no security updates since August 2023, so do not leave the old files around for long.
+
+The plan is a one-step switch at a quiet time: the old site goes offline for the hour or two the deployment takes, and the backup is the fallback. (The alternative, deploying first on a subdomain such as `new.yourdomain.co.uk`, means deploying twice, which is more than a small site needs.)
+
+### J1. Prepare redirects on the test server (now)
+
+Old Joomla addresses such as `/index.php/about-us` will 404 on the new site, breaking bookmarks and search results.
+
+1. List the old URLs people actually use: main menu pages and anything linked from elsewhere.
+2. In the Wagtail admin on the test server, go to **Settings → Redirects** and map each old path to its new page.
+3. These are stored in `db.sqlite3`, so they travel to Krystal with the rest of the content.
+
+### J2. Agree a content cut-off (before the switch)
+
+Tell collaborators the date after which edits should stop on the test site, so nothing is lost when `db.sqlite3` is packaged in step 5.
+
+### J3. Back up the Joomla site (after step 6, before step 7)
+
+1. In cPanel, open **Backup** (or **Backup Wizard**) and download a **home directory** backup.
+2. Find Joomla's database name in `public_html/configuration.php` (the `$db` line), then download that **MySQL database** backup from the same page.
+3. If Joomla has Akeeba Backup installed, download a `.jpa` backup from it as a second copy.
+4. Keep all backups off the server.
+
+### J4. Move Joomla out of public\_html (straight after J3)
+
+1. In **File Manager**, open **Settings** and tick **Show Hidden Files**, so `.htaccess` is visible.
+2. Create a folder outside `public_html`, e.g. `~/joomla-old`.
+3. Select everything inside `public_html` and **Move** it to `~/joomla-old`, including `.htaccess`.
+4. Leave the empty `public_html` folder in place, plus `.well-known` if it exists (AutoSSL uses it).
+
+Moving rather than deleting means Joomla can be put back quickly: stop the Python app, move the files back, and the old site returns. Then continue with step 7: creating the Python app writes fresh Passenger rules into `public_html/.htaccess`.
+
+### J5. Tidy up (once the new site is settled)
+
+- [ ] Old Joomla URLs from J1 redirect to the right new pages
+- [ ] Delete `~/joomla-old` after a few weeks without problems
+- [ ] Delete the Joomla database in cPanel's **MySQL Databases**, keeping the downloaded backup
+
+Email on the domain is separate from the website and keeps working throughout.
+
 ## Part 2: Deploy on Krystal
 
-Do these in order once you can log in to cPanel.
+Do these in order once you can log in to cPanel. Between steps 6 and 7, do J3 and J4 above to move the Joomla site out.
 
 ### 6. Check the basics
 
