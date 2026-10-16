@@ -81,6 +81,17 @@ python -c "from django.core.management.utils import get_random_secret_key; print
 
 Store it somewhere safe, not in Git. You will paste it into cPanel in step 11.
 
+### J1. Prepare redirects for the old Joomla URLs
+
+Old Joomla addresses such as `/index.php/about-us` will 404 on the new site, breaking bookmarks and search results. Set up redirects now, because they are stored in `db.sqlite3` and travel to Krystal in step 5.
+
+1. List the old URLs people actually use: main menu pages and anything linked from elsewhere.
+2. In the Wagtail admin on the test server, go to **Settings → Redirects** and map each old path to its new page.
+
+### J2. Agree a content cut-off
+
+Tell collaborators the date after which edits should stop on the test site, so nothing is lost when `db.sqlite3` is packaged in step 5. Package on or after that date.
+
 ### 5. Package the site
 
 From the folder that contains `mgsite`:
@@ -102,17 +113,7 @@ The old Joomla 3 site lives in `public_html` on the same Krystal account, where 
 
 The plan is a one-step switch at a quiet time: the old site goes offline for the hour or two the deployment takes, and the backup is the fallback. (The alternative, deploying first on a subdomain such as `new.yourdomain.co.uk`, means deploying twice, which is more than a small site needs.)
 
-### J1. Prepare redirects on the test server (now)
-
-Old Joomla addresses such as `/index.php/about-us` will 404 on the new site, breaking bookmarks and search results.
-
-1. List the old URLs people actually use: main menu pages and anything linked from elsewhere.
-2. In the Wagtail admin on the test server, go to **Settings → Redirects** and map each old path to its new page.
-3. These are stored in `db.sqlite3`, so they travel to Krystal with the rest of the content.
-
-### J2. Agree a content cut-off (before the switch)
-
-Tell collaborators the date after which edits should stop on the test site, so nothing is lost when `db.sqlite3` is packaged in step 5.
+J1 and J2 happen on the test server, so they sit in Part 1 just before step 5. J3 to J5 below happen on Krystal.
 
 ### J3. Back up the Joomla site (after step 6, before step 7)
 
