@@ -124,10 +124,10 @@ J1 and J2 happen on the test server, so they sit in Part 1 just before step 5. J
 
 ### J4. Move Joomla out of public\_html (straight after J3)
 
-1. In **File Manager**, open **Settings** and tick **Show Hidden Files**, so `.htaccess` is visible.
+1. In **File Manager**, open **Settings** and tick **Show Hidden Files**, so `.htaccess` and `.well-known` are visible.
 2. Create a folder outside `public_html`, e.g. `~/joomla-old`.
-3. Select everything inside `public_html` and **Move** it to `~/joomla-old`, including `.htaccess`.
-4. Leave the empty `public_html` folder in place, plus `.well-known` if it exists (AutoSSL uses it).
+3. Select everything inside `public_html` **except `.well-known`** and **Move** it to `~/joomla-old`. Include `.htaccess`.
+4. Check that `public_html` now holds only `.well-known` (AutoSSL needs it to issue and renew your certificate).
 
 Moving rather than deleting means Joomla can be put back quickly: stop the Python app, move the files back, and the old site returns. Then continue with step 7: creating the Python app writes fresh Passenger rules into `public_html/.htaccess`.
 
