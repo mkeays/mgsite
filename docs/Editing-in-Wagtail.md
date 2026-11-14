@@ -12,7 +12,7 @@ changes before you publish them.
 
 ### 1. Log in
 
-Go to [the login page](https://www.mothergoospreschool.co.uk/admin), and enter
+Go to [the login page](https://www.mothergoosepreschool.co.uk/admin), and enter
 your username and password to log in.
 
 
