@@ -15,4 +15,6 @@ changes before you publish them.
 Go to [the login page](https://www.mothergoosepreschool.co.uk/admin), and enter
 your username and password to log in.
 
+![Login page](https://github.com/mkeays/mgsite/blob/main/docs/images/mg-admin-login.png)
+
 
